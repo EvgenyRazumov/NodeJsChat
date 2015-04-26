@@ -1,0 +1,240 @@
+<% layout('../layouts/master') %>
+<% block('title', 'Chat Room') %>
+<script>
+    var chatConfiguration = {
+        currentUsername: '<%= user %>',
+        privateChatPopup: null,
+        privateChatReceiver: null
+    };
+
+    $(document).ready(function() {
+        socket.emit('join user', chatConfiguration.currentUsername);
+        socket.on('user joined', function(username){
+            if (username != chatConfiguration.currentUsername) {
+                $('#user-list').append($('#user-line-template').clone().html().replace(/{username}/g, username));
+            }
+        });
+        socket.on('user left', function(username){
+            if (username == chatConfiguration.currentUsername)
+                window.location.href = '/';
+
+            $('li[data-user="' + username + '"]').remove();
+        });
+        socket.on('message added', function(msg){
+            addMessageToChat($('.message-container'), msg.name, msg.message, msg.sendTime);
+        });
+        socket.on('private message added', function(msg){
+            if (chatConfiguration.privateChatReceiver == msg.senderName || chatConfiguration.privateChatReceiver == msg.receiverName) {
+                addMessageToChat(chatConfiguration.privateChatPopup.find('.private-message-container'), msg.senderName, msg.message, msg.sendTime);
+            } else {
+                $('.new-messages[data-user="' + msg.senderName + '"]').removeClass('hidden');
+            }
+        });
+    });
+
+    $(document).on('submit', '#send-private-message-form', function(){
+        var message = $('#private-message').val();
+        if (!message)
+            return false;
+
+        socket.emit('send private message',
+                {
+                    senderName: chatConfiguration.currentUsername,
+                    receiverName: $('#receiver-username').val(),
+                    message: message,
+                    sendTime: new Date()
+                });
+        $('#private-message').val('');
+        return false;
+    });
+
+    $(document).on('submit', '#send-message-form', function(){
+        var message = $('#message').val();
+        if (!message)
+            return false;
+
+        socket.emit('send message', { name: chatConfiguration.currentUsername, message: message, sendTime: new Date() });
+        $('#message').val('');
+        return false;
+    });
+
+    $(document).on('click', '.private-chat-link', function(){
+        var receiverUsername = $(this).data('user');
+        $.ajax({
+            url: "/chat/loadPrivateMessages",
+            data: {
+                user: receiverUsername
+            },
+            context: this,
+            success: function(data){
+                privateChatLoaded(receiverUsername, data);
+            },
+            error: function(){
+                alert('Something went wrong');
+            }
+        })
+        return false;
+    });
+
+    //helpers
+    function htmlEncode(value){
+        return value.replace('<', '&lt;').replace('>', '&gt;');
+    }
+
+    function scrollChatToTheLatestMessage(messageContainer){
+        messageContainer.scrollTop(messageContainer[0].scrollHeight);
+    }
+
+    function addMessageToChat(messageContainer, username, message, sendTime){
+        var isYourOwnMessage = username == chatConfiguration.currentUsername;
+        var item = $('#message-line-template').clone().html().replace('{username}', isYourOwnMessage ? "Your message" : username)
+                .replace('{message}', htmlEncode(message))
+                .replace('{message-class}', isYourOwnMessage ? "your-message" : "other-message")
+                .replace('{time}', new Date(sendTime).toLocaleString());
+
+        messageContainer.find('.message-list').append(item);
+        scrollChatToTheLatestMessage(messageContainer);
+    }
+
+    function privateChatLoaded(receiverUsername, data){
+        var item = $('#private-chat-dialog-template').clone().html().replace(/{username}/g, receiverUsername);
+        var $item = $(item);
+
+        $item.find('.send-private-message-form').attr('id', 'send-private-message-form').removeClass('send-private-message-form');
+        $item.find('.private-message').attr('id', 'private-message').removeClass('private-message');
+        $item.find('.receiver-username').attr('id', 'receiver-username').removeClass('receiver-username');
+
+        $item.dialog({
+            modal: true,
+            width: 800,
+            height: 500,
+            title: "Private Chat",
+            open: function( ) {
+                chatConfiguration.privateChatReceiver = receiverUsername;
+                chatConfiguration.privateChatPopup = $item;
+                $('.new-messages[data-user="' + receiverUsername + '"]').addClass('hidden');
+            },
+            close: function( ) {
+                chatConfiguration.privateChatReceiver = null;
+                chatConfiguration.privateChatPopup = null;
+                $(this).dialog('destroy').remove();
+            }
+        });
+
+        $(data).each(function(){
+            addMessageToChat($item.find('.private-message-container'), this.senderName, this.message, this.sendTime);
+        });
+    }
+</script>
+
+<div class="templates hidden">
+
+    <div id="user-line-template">
+        <li class="media" data-user="{username}">
+            <div class="media-body">
+                <div class="media">
+                    <a class="pull-left  private-chat-link" href="#" data-user="{username}">
+                        <img class="media-object img-circle" style="max-height: 32px;" src="/images/user.png" />
+                    </a>
+                    <div class="media-body" >
+                        <h5 class="inline">{username} | User </h5>
+                        <img src="/images/new_message.png" style="max-height: 32px;" class="inline pull-right hidden new-messages" data-user="{username}" />
+                    </div>
+                </div>
+            </div>
+        </li>
+    </div>
+
+    <div id="message-line-template">
+        <li class="media {message-class}">
+            <div class="media-body">
+                <div class="media">
+                    <a class="pull-left" href="#">
+                        <img class="media-object img-circle " src="/images/user.png" />
+                    </a>
+                    <div class="media-body" >
+                        {message}
+                        <br />
+                        <small class="text-muted">{username} | {time}</small>
+                    </div>
+                </div>
+            </div>
+        </li>
+    </div>
+
+    <div id="private-chat-dialog-template">
+        <div class="panel panel-info private-chat">
+            <div class="panel-heading">
+                CHAT WITH {username}
+            </div>
+            <div class="panel-body private-message-container">
+                <ul class="media-list message-list">
+                </ul>
+            </div>
+            <div class="panel-footer">
+                <form action="" class="send-private-message-form">
+                    <div class="input-group">
+                        <input type="hidden" class="form-control receiver-username" value="{username}" />
+                        <input type="text" class="form-control private-message" placeholder="Enter Message" />
+                            <span class="input-group-btn">
+                                <button class="btn btn-info" type="submit">SEND</button>
+                            </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                USERS [Click on user's icon to open private chat]
+            </div>
+            <div class="panel-body">
+                <ul class="media-list" id="user-list">
+
+                    <% activeUsers.forEach(function(activeUser){ %>
+                        <li class="media" data-user="<%=activeUser %>">
+                            <div class="media-body">
+                                <div class="media">
+                                    <a class="pull-left private-chat-link" href="#" data-user="<%=activeUser %>">
+                                        <img class="media-object img-circle pull-left" style="max-height: 32px;" src="/images/user.png" />
+                                    </a>
+                                    <div class="media-body" >
+                                        <h5 class="inline"><%=activeUser %> | User </h5>
+                                        <img src="/images/new_message.png" class="inline pull-right hidden new-messages" data-user="<%=activeUser %>" />
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    <% }); %>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                RECENT CHAT HISTORY
+            </div>
+            <div class="panel-body message-container">
+                <ul class="media-list message-list">
+                </ul>
+            </div>
+            <div class="panel-footer">
+                <form action="" id="send-message-form">
+                    <div class="input-group">
+                        <input type="text" class="form-control" placeholder="Enter Message" id="message" />
+                        <span class="input-group-btn">
+                            <button class="btn btn-info" type="submit">SEND</button>
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+<% layout('../layouts/master') %>
+<% block('title', 'Welcome to chat!') %>
+<div class="row">
+    <div class="col-md-5">
+        <% if (user) { %>
+            <p>You've already signed in. Go to <a href="/chat">Chat</a> page and have fun :)</p>
+        <% } else { %>
+            <p>Sign in and post your messages :)</p>
+            <form role="form" action="/" method="post">
+                <div class="form-group">
+                    <label for="email">User name:</label>
+                    <input type="text" class="form-control" id="userName" name="username" value="<%= username%>">
+                </div>
+                <% if (errors) { %>
+                    <div class="alert alert-warning">
+                        <% errors.forEach(function(error){ %>
+                        <strong>Error!</strong> <%= error.msg%>
+                        <% }); %>
+                    </div>
+                <% } %>
+                <button type="submit" class="btn btn-default">Sign In</button>
+            </form>
+        <% } %>
+    </div>
+</div>
