@@ -95,24 +95,18 @@ function privateChatLoaded(receiverUsername, data){
     $item.find('.private-message').attr('id', 'private-message').removeClass('private-message');
     $item.find('.receiver-username').attr('id', 'receiver-username').removeClass('receiver-username');
 
-    $item.dialog({
-        modal: true,
-        width: 800,
-        height: 500,
-        title: "Private Chat",
-        open: function( ) {
-            chatConfiguration.privateChatReceiver = receiverUsername;
-            chatConfiguration.privateChatPopup = $item;
-            $('.new-messages[data-user="' + receiverUsername + '"]').addClass('hidden');
-        },
-        close: function( ) {
-            chatConfiguration.privateChatReceiver = null;
-            chatConfiguration.privateChatPopup = null;
-            $(this).dialog('destroy').remove();
-        }
+    $item.on('shown.bs.modal', function() {
+         $(data).each(function(){
+            addMessageToChat($item.find('.private-message-container'), this.senderName, this.message, this.sendTime);
+        });
+        chatConfiguration.privateChatReceiver = receiverUsername;
+        chatConfiguration.privateChatPopup = $item;
+        $('.new-messages[data-user="' + receiverUsername + '"]').addClass('hidden');
     });
-
-    $(data).each(function(){
-        addMessageToChat($item.find('.private-message-container'), this.senderName, this.message, this.sendTime);
+    $item.on('hidden.bs.modal', function(){
+        chatConfiguration.privateChatPopup.remove();
+        chatConfiguration.privateChatReceiver = null;
+        chatConfiguration.privateChatPopup = null;
     });
+    $item.modal();
 }

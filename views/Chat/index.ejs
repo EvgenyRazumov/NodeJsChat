@@ -45,24 +45,33 @@
     </div>
 
     <div id="private-chat-dialog-template">
-        <div class="panel panel-info private-chat">
-            <div class="panel-heading">
-                CHAT WITH {username}
-            </div>
-            <div class="panel-body private-message-container">
-                <ul class="media-list message-list">
-                </ul>
-            </div>
-            <div class="panel-footer">
-                <form action="" class="send-private-message-form">
-                    <div class="input-group">
-                        <input type="hidden" class="form-control receiver-username" value="{username}" />
-                        <input type="text" class="form-control private-message" placeholder="Enter Message" />
-                            <span class="input-group-btn">
-                                <button class="btn btn-info" type="submit">SEND</button>
-                            </span>
+        <div class="modal fade" role="dialog" aria-labelledby="gridSystemModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title">Private chat with {username}</h4>
                     </div>
-                </form>
+                    <div class="modal-body">
+                        <div class="panel panel-info private-chat">
+                             <div class="panel-body private-message-container">
+                                <ul class="media-list message-list">
+                                </ul>
+                            </div>
+                            <div class="panel-footer">
+                                <form action="" class="send-private-message-form">
+                                    <div class="input-group">
+                                        <input type="hidden" class="form-control receiver-username" value="{username}" />
+                                        <input type="text" class="form-control private-message" placeholder="Enter Message" />
+                                            <span class="input-group-btn">
+                                                <button class="btn btn-info" type="submit">SEND</button>
+                                            </span>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

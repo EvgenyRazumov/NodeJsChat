@@ -12,7 +12,7 @@
                     <input type="text" class="form-control" id="userName" name="username" value="<%= username%>">
                 </div>
                 <% if (errors) { %>
-                    <div class="alert alert-warning">
+                    <div class="alert alert-danger">
                         <% errors.forEach(function(error){ %>
                         <strong>Error!</strong> <%= error.msg%>
                         <% }); %>
